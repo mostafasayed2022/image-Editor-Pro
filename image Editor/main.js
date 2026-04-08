@@ -1,74 +1,105 @@
-let saturate=document.getElementById("saturate");
-let contrast=document.getElementById("contrast");
-let brightness=document.getElementById("brightness");
-let sepia=document.getElementById("sepia");
-let grayscale=document.getElementById("grayscale");
-let blur=document.getElementById("blur");
-let huerotate=document.getElementById("huerotate");
-let upload=document.getElementById("upload");
-let download=document.getElementById("download");
-let img=document.getElementById("img");
-let reset=document.querySelector('span');
-let imgbox=document.querySelector('.img-box');
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext('2d');
+const saturate = document.getElementById("saturate");
+const contrast = document.getElementById("contrast");
+const brightness = document.getElementById("brightness");
+const sepia = document.getElementById("sepia");
+const grayscale = document.getElementById("grayscale");
+const blur = document.getElementById("blur");
+const huerotate = document.getElementById("huerotate");
+const upload = document.getElementById("upload");
+const download = document.getElementById("download");
+const img = document.getElementById("img");
+const reset = document.getElementById("reset");
+const imgBox = document.getElementById("img-container");
+const placeholder = document.getElementById("placeholder-text");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext('2d');
 
-function resetvalue(){
-    img.style.filter='none';
-    saturate.value='100';
-    contrast.value='100';
-    brightness.value='100';
-    sepia.value='0';
-    grayscale.value='0';
-    blur.value='0';
-    huerotate.value='0';
+const filters = document.querySelectorAll("input[type='range']");
+
+// Helper to update value displays
+function updateValueDisplays() {
+    filters.forEach(filter => {
+        const display = filter.parentElement.querySelector('.val-display');
+        if (display) {
+            let unit = "";
+            if (filter.id === "blur") unit = "px";
+            else if (filter.id === "huerotate") unit = "°";
+            else if (["saturate", "contrast", "brightness", "sepia"].includes(filter.id)) unit = "%";
+            display.textContent = `${filter.value}${unit}`;
+        }
+    });
+}
+
+function resetValue() {
+    ctx.filter = "none";
+    saturate.value = 100;
+    contrast.value = 100;
+    brightness.value = 100;
+    sepia.value = 0;
+    grayscale.value = 0;
+    blur.value = 0;
+    huerotate.value = 0;
     
+    updateValueDisplays();
+    if (img.src) drawImage();
 }
 
-window.onload=function(){
-    download.style.display='none';
-    reset.style.display='none';
-    imgbox.style.display='none';
+function drawImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.filter = `
+        saturate(${saturate.value}%)
+        contrast(${contrast.value}%)
+        brightness(${brightness.value}%)
+        sepia(${sepia.value}%)
+        grayscale(${grayscale.value})
+        blur(${blur.value}px)
+        hue-rotate(${huerotate.value}deg)
+    `;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
-upload.onchange=function(){
-    resetvalue();
-    download.style.display='block';
-    reset.style.display='block';
-    imgbox.style.display='block';
-    let file=new FileReader();
-    file.readAsDataURL(upload.files[0]);
-    file.onload=function(){
-        img.src=file.result;
+window.onload = function () {
+    download.style.visibility = 'hidden';
+    reset.style.visibility = 'hidden';
+    canvas.style.display = 'none';
+    img.style.display = 'none';
+    updateValueDisplays();
+};
+
+upload.onchange = function () {
+    if (upload.files && upload.files[0]) {
+        resetValue();
+        
+        download.style.visibility = 'visible';
+        reset.style.visibility = 'visible';
+        placeholder.style.display = 'none';
+        canvas.style.display = 'block';
+
+        const reader = new FileReader();
+        reader.readAsDataURL(upload.files[0]);
+
+        reader.onload = function () {
+            img.src = reader.result;
+        };
+
+        img.onload = function () {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            drawImage();
+        };
     }
-        img.onload=function(){
-        canvas.width=img.width;
-        canvas.height=img.height;
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        img.style.display="none";
-    }
-}
+};
 
-let filters=document.querySelectorAll("ul li input");
-filters.forEach(filter =>{
-filter.addEventListener('input', function(){
-ctx.filter=`
-saturate(${saturate.value}%)
-contrast(${contrast.value}%)
-brightness(${brightness.value}%)
-sepia(${sepia.value}%)
-grayscale(${grayscale.value})
-blur(${blur.value}px)
-hue-rotate(${huerotate.value}deg)
-`
-ctx.drawImage(img,0,0,canvas.width,canvas.height);
+filters.forEach(filter => {
+    filter.addEventListener('input', () => {
+        drawImage();
+        updateValueDisplays();
+    });
 });
-})
 
-download.onclick=function(){
-    download.href=canvas.toDataURL();
-}
+reset.onclick = resetValue;
 
-
-
-
+download.onclick = function () {
+    download.href = canvas.toDataURL("image/png");
+    download.download = "pixel-flow-edit.png";
+};
